@@ -1,0 +1,17 @@
+{
+  "name": "claude-buddy-picker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "npx tsx src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.90",
+    "@inquirer/prompts": "^7.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7",
+    "typescript": "^5.4"
+  }
+}
