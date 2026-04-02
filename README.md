@@ -2,6 +2,8 @@
 
 A CLI tool to customize your [Claude Code](https://docs.anthropic.com/en/docs/claude-code) companion buddy. Pick your buddy's species, rarity, eyes, hat, shininess, and stats -- then patch the CLI binary so your custom buddy appears every time.
 
+![Demo](asset/demo.gif)
+
 ## How It Works
 
 1. **Backup** -- Saves your current `.claude.json` and strips any existing companion data
