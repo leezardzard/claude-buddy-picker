@@ -1,7 +1,8 @@
 import { select, confirm, number } from "@inquirer/prompts";
-import { readFileSync, writeFileSync, copyFileSync } from "fs";
-import { join, resolve } from "path";
+import { readFileSync, writeFileSync, copyFileSync, existsSync } from "fs";
+import { join } from "path";
 import { homedir } from "os";
+import { execSync } from "child_process";
 
 // --- Options extracted from CLI binary ---
 
@@ -21,16 +22,36 @@ const HATS = [
 
 const STATS = ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"] as const;
 
+const INSTALL_METHODS = [
+  { name: "npm global (npm install -g @anthropic-ai/claude-code)", value: "npm-global" },
+  { name: "Native install script (curl-based installer)", value: "native" },
+] as const;
+
+type InstallMethod = (typeof INSTALL_METHODS)[number]["value"];
+
 // --- Paths ---
 
 const CLAUDE_JSON = join(homedir(), ".claude.json");
 const CLAUDE_JSON_BACKUP = join(homedir(), ".claude.json.backup");
-const CLI_JS = resolve("node_modules/@anthropic-ai/claude-code/cli.js");
 
 // --- Helpers ---
 
 function toChoices<T extends string>(items: readonly T[]) {
   return items.map((item) => ({ name: item, value: item }));
+}
+
+function resolveCliBinaryPath(method: InstallMethod): string {
+  const CLAUDE_CODE_PKG = "@anthropic-ai/claude-code/cli.js";
+
+  switch (method) {
+    case "npm-global": {
+      const npmRoot = execSync("npm root -g", { encoding: "utf8" }).trim();
+      return join(npmRoot, CLAUDE_CODE_PKG);
+    }
+    case "native": {
+      return join(homedir(), ".claude/local", CLAUDE_CODE_PKG);
+    }
+  }
 }
 
 // --- Step 1: Backup & strip companion ---
@@ -53,6 +74,19 @@ function backupAndStripCompanion() {
 // --- Step 2: Interactive picker ---
 
 async function pickBuddyProperties() {
+  const installMethod = await select({
+    message: "How did you install Claude Code?",
+    choices: [...INSTALL_METHODS],
+  });
+
+  const cliPath = resolveCliBinaryPath(installMethod);
+  if (!existsSync(cliPath)) {
+    console.error(`\n❌ CLI binary not found at: ${cliPath}`);
+    console.error("   Please check your installation and try again.");
+    process.exit(1);
+  }
+  console.log(`   Found CLI at: ${cliPath}\n`);
+
   console.log("🎨 Pick your buddy's properties:\n");
 
   const rarity = await select({
@@ -77,7 +111,7 @@ async function pickBuddyProperties() {
 
   const shiny = await confirm({
     message: "Shiny?",
-    default: false,
+    default: true,
   });
 
   console.log("\n📊 Set stats (0-100):\n");
@@ -88,17 +122,17 @@ async function pickBuddyProperties() {
       message: stat,
       min: 0,
       max: 100,
-      default: 50,
+      default: 100,
     });
-    stats[stat] = value ?? 50;
+    stats[stat] = value ?? 100;
   }
 
-  return { rarity, species, eye, hat, shiny, stats };
+  return { cliPath, rarity, species, eye, hat, shiny, stats };
 }
 
 // --- Step 3: Patch CLI binary ---
 
-function patchCliBinary(choices: {
+function patchCliBinary(cliPath: string, choices: {
   rarity: string;
   species: string;
   eye: string;
@@ -108,7 +142,7 @@ function patchCliBinary(choices: {
 }) {
   console.log("\n🔧 Patching CLI binary...");
 
-  const cliSource = readFileSync(CLI_JS, "utf8");
+  const cliSource = readFileSync(cliPath, "utf8");
 
   const pattern =
     /function \w+\(\w+\)\{let \w+=\w+\(\w+\);return\{bones:\{rarity:\w+,species:\w+\(\w+,\w+\),eye:\w+\(\w+,\w+\),hat:\w+===.common.\?.none.:\w+\(\w+,\w+\),shiny:\w+\(\)<[\d.]+,stats:\w+\(\w+,\w+\)\},inspirationSeed:Math\.floor\(\w+\(\)\*1e9\)\}\}/;
@@ -120,10 +154,13 @@ function patchCliBinary(choices: {
     process.exit(1);
   }
 
-  const replacement = `function patchedBuddy(q){return{bones:{rarity:${JSON.stringify(choices.rarity)},species:${JSON.stringify(choices.species)},eye:${JSON.stringify(choices.eye)},hat:${JSON.stringify(choices.hat)},shiny:${choices.shiny},stats:${JSON.stringify(choices.stats)}},inspirationSeed:Math.floor(q()*1e9)}}`;
+  // Extract the original function name so other code can still reference it
+  const origFnName = match[0].match(/^function (\w+)/)![1];
+
+  const replacement = `function ${origFnName}(q){return{bones:{rarity:${JSON.stringify(choices.rarity)},species:${JSON.stringify(choices.species)},eye:${JSON.stringify(choices.eye)},hat:${JSON.stringify(choices.hat)},shiny:${choices.shiny},stats:${JSON.stringify(choices.stats)}},inspirationSeed:Math.floor(q()*1e9)}}`;
 
   const patched = cliSource.replace(pattern, replacement);
-  writeFileSync(CLI_JS, patched);
+  writeFileSync(cliPath, patched);
   console.log("   Patched successfully!\n");
 }
 
@@ -156,7 +193,7 @@ async function main() {
     process.exit(0);
   }
 
-  patchCliBinary(choices);
+  patchCliBinary(choices.cliPath, choices);
 
   console.log("🎉 Done! Now:");
   console.log("   1. Run: claude");
