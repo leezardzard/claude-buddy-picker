@@ -1,8 +1,26 @@
 {
   "name": "claude-buddy-picker",
   "version": "1.0.0",
+  "description": "CLI tool to customize your Claude Code companion buddy",
   "main": "index.js",
   "license": "MIT",
+  "author": "Dominic Lee",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "buddy",
+    "companion",
+    "cli",
+    "customization"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leezardzard/claude-buddy-picker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/leezardzard/claude-buddy-picker/issues"
+  },
+  "homepage": "https://github.com/leezardzard/claude-buddy-picker#readme",
   "scripts": {
     "start": "npx tsx src/index.ts"
   },
