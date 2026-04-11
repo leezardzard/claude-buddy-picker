@@ -22,13 +22,6 @@ const HATS = [
 
 const STATS = ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"] as const;
 
-const INSTALL_METHODS = [
-  { name: "npm global (npm install -g @anthropic-ai/claude-code)", value: "npm-global" },
-  { name: "Native install script (curl-based installer)", value: "native" },
-] as const;
-
-type InstallMethod = (typeof INSTALL_METHODS)[number]["value"];
-
 // --- Paths ---
 
 const CLAUDE_JSON = join(homedir(), ".claude.json");
@@ -40,18 +33,10 @@ function toChoices<T extends string>(items: readonly T[]) {
   return items.map((item) => ({ name: item, value: item }));
 }
 
-function resolveCliBinaryPath(method: InstallMethod): string {
+function resolveCliBinaryPath(): string {
   const CLAUDE_CODE_PKG = "@anthropic-ai/claude-code/cli.js";
-
-  switch (method) {
-    case "npm-global": {
-      const npmRoot = execSync("npm root -g", { encoding: "utf8" }).trim();
-      return join(npmRoot, CLAUDE_CODE_PKG);
-    }
-    case "native": {
-      return join(homedir(), ".claude/local", CLAUDE_CODE_PKG);
-    }
-  }
+  const npmRoot = execSync("npm root -g", { encoding: "utf8" }).trim();
+  return join(npmRoot, CLAUDE_CODE_PKG);
 }
 
 // --- Step 1: Backup & strip companion ---
@@ -74,18 +59,14 @@ function backupAndStripCompanion() {
 // --- Step 2: Interactive picker ---
 
 async function pickBuddyProperties() {
-  const installMethod = await select({
-    message: "How did you install Claude Code?",
-    choices: [...INSTALL_METHODS],
-  });
-
-  const cliPath = resolveCliBinaryPath(installMethod);
+  const cliPath = resolveCliBinaryPath();
   if (!existsSync(cliPath)) {
     console.error(`\n❌ CLI binary not found at: ${cliPath}`);
-    console.error("   Please check your installation and try again.");
+    console.error("   Only npm global installs are supported. Install with:");
+    console.error("   npm install -g @anthropic-ai/claude-code");
     process.exit(1);
   }
-  console.log(`   Found CLI at: ${cliPath}\n`);
+  console.log(`\n   Found CLI at: ${cliPath}\n`);
 
   console.log("🎨 Pick your buddy's properties:\n");
 

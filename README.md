@@ -13,7 +13,9 @@ A CLI tool to customize your [Claude Code](https://docs.anthropic.com/en/docs/cl
 ## Prerequisites
 
 - **Node.js** >= 18
-- **Claude Code** installed via npm global or native installer
+- **Claude Code** installed via npm global (`npm install -g @anthropic-ai/claude-code`)
+
+> Note: only npm global installs are supported. The native installer ships a compiled binary, which this tool cannot patch.
 
 ## Installation
 
@@ -47,11 +49,7 @@ After confirming, the tool patches your Claude Code CLI. Run `claude` and type `
 Re-install Claude Code to restore the unpatched binary:
 
 ```bash
-# npm global
 npm install -g @anthropic-ai/claude-code
-
-# native installer
-curl -fsSL https://claude.ai/install.sh | sh
 ```
 
 Your `.claude.json` backup is saved at `~/.claude.json.backup`.
